@@ -1,0 +1,14 @@
+{
+  "name": "apartment-monitor",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "start": "node ."
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bent": "^7.3.12"
+  }
+}
