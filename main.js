@@ -1,14 +1,13 @@
 const bent = require('bent')
+const getJSON = bent('json')
+const post = bent('POST', 'json', 200)
 
 const monitor_delay = 10000
 const url = 'https://inventory.g5marketingcloud.com/api/v1/apartment_complexes/g5-cl-1hy09e989w-estates-on-frankford/floorplans'
-const webhook = 'ADD DISCORD WEBHOOK HERE'
+const webhook = 'ADD DISCORD WEBHOOK LINK HERE'
 function getAptLink(_id) {
     return `https://www.rentanapt.com/apartments/tx/dallas/estates-on-frankford/floor-plans#/apartment/${_id}/details`
 }
-
-const getJSON = bent('json')
-const post = bent('POST', 'json', 200)
 
 let aptQueue = [],
     apartments = {
@@ -53,6 +52,7 @@ function monitorSite() {
         else 
             console.error("Missing json data from request.")
         
+        //re-monitor ever monitor_delay MS
         setTimeout(monitorSite, monitor_delay)
     })
     .catch(err => {
@@ -61,23 +61,23 @@ function monitorSite() {
 }
 
 function addApartment(_id, _type, _price, _date, _image_url) {
+    //create unique constant ID since _id is variable
+    let new_id = _type + _price + _date;
+
     //make sure the apartment hasn't already been added
-    if (!apartments[_id]) {
+    if (!apartments[new_id]) {
         //create apartment object
-        apartments[_id] = {
+        apartments[new_id] = {
             id: _id,
             type: _type,
             price: _price,
             availability_date: _date,
             image_url: _image_url 
         }
-        console.log(`added apartment ${_id}`)
 
         //add apartment object to queue to be sent via webhook
-        aptQueue.push(apartments[_id])
+        aptQueue.push(apartments[new_id])
     }
-    else 
-        console.log(`apartment ${_id} already exists`)  
 }
 
 function sendHooks () {
@@ -85,6 +85,8 @@ function sendHooks () {
     if (aptQueue.length > 0) {
         //get the first apartment and remove from the queue/array
         let apt = (aptQueue.splice(0, 1))[0]
+
+        let date = new Date()
 
         //create the embeded discord message
         let discord_msg = {
@@ -95,7 +97,8 @@ function sendHooks () {
                     title: `New Listing: ${apt.type}`,
                     color: 11502817,
                     description: `Price: ${apt.price}\nAvailable ${apt.availability_date}\n[View](${getAptLink(apt.id)})`,
-                    thumbnail: { url: apt.image_url }
+                    thumbnail: { url: apt.image_url },
+                    footer: { text: `${date.getMonth()}/${date.getDay()}/${date.getFullYear()}  ${date.getHours()}:${date.getMinutes()}` }
                 }
             ]
         }
@@ -107,7 +110,8 @@ function sendHooks () {
         })
         .catch(err => {
             //requeue apartment to try again
-            aptQueue.push(apt)
+            if (err.statusCode != 204 && err.statusCode != 200)
+                aptQueue.push(apt)
         })
     }
 
